@@ -1,0 +1,35 @@
+name: "sef"
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sef-backend
+    ports:
+      - "5000:5000"
+    environment:
+      DATABASE_URL: "sqlite:////app/instance/app.db"
+      SECRET_KEY: "please-change-me"
+      JWT_COOKIE_NAME: "eg_token"
+      JWT_EXPIRES_IN: "604800"
+      CORS_ORIGINS: "http://localhost:5173,http://127.0.0.1:5173"
+    volumes:
+      - backend_instance:/app/instance
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: sef-frontend
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_BASE: "http://localhost:5000"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  backend_instance:

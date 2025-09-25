@@ -11,9 +11,12 @@ def create_app():
     app.config.from_object(settings)
 
     CORS(
-        app,
-        resources={r"/api/*": {"origins": settings.CORS_ORIGINS}},
-        supports_credentials=True,
+       app,
+    resources={r"/api/*": {"origins": [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173"
+    ]}},
+    supports_credentials=True,
     )
 
     db.init_app(app)
@@ -33,4 +36,4 @@ def create_app():
 
 if __name__ == "__main__":
     app = create_app()
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)
