@@ -35,3 +35,9 @@ npm install
 ```bash
 npm run dev
 ```
+
+## 🐋 Pokretanje korišćenjem Dockera
+
+```bash
+docker compose up --build
+```

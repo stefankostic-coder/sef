@@ -14,6 +14,8 @@ services:
       JWT_COOKIE_NAME: "eg_token"
       JWT_EXPIRES_IN: "604800"
       CORS_ORIGINS: "http://localhost:5173,http://127.0.0.1:5173"
+      DB_PATH: "/app/instance/app.db"
+      SEED_ON_EVERY_START: "false"
     volumes:
       - backend_instance:/app/instance
     restart: unless-stopped

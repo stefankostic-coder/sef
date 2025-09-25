@@ -15,7 +15,14 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . /app
 
+# Ensure instance folder exists u image-u (fallback; praviće se i u entrypointu)
+RUN mkdir -p /app/instance
+
+# Entrypoint
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
 EXPOSE 5000
 
 # Run
-CMD ["python", "app.py"]
+CMD ["/app/entrypoint.sh"]
