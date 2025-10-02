@@ -28,7 +28,15 @@ function EmptyState({ title, subtitle, showCreate, createHref }) {
   );
 }
 
-function Table({ rows, title, canDelete, onDelete, emptyProps }) {
+function Table({
+  rows,
+  title,
+  canDelete,
+  onDelete,
+  emptyProps,
+  showActions,
+  onSendEmail,
+}) {
   const hasRows = rows.length > 0;
   return (
     <div className='rounded-xl border border-slate-200 bg-white overflow-x-auto'>
@@ -54,6 +62,7 @@ function Table({ rows, title, canDelete, onDelete, emptyProps }) {
               <th className='px-4 py-3'>Datum</th>
               <th className='px-4 py-3'>Iznos</th>
               <th className='px-4 py-3'>Status</th>
+              {showActions && <th className='px-4 py-3'>Akcije</th>}
               {canDelete && <th className='px-4 py-3'></th>}
             </tr>
           </thead>
@@ -73,6 +82,31 @@ function Table({ rows, title, canDelete, onDelete, emptyProps }) {
                 <td className='px-4 py-2 uppercase text-slate-600'>
                   {r.status}
                 </td>
+
+                {showActions && (
+                  <td className='px-4 py-2'>
+                    <div className='flex flex-wrap items-center gap-2'>
+                      {/* Preuzmi PDF */}
+                      <a
+                        href={api.getInvoicePdfUrl(r.id)}
+                        target='_blank'
+                        rel='noopener noreferrer'
+                        className='rounded-lg border border-slate-300 px-3 py-1.5 hover:bg-slate-50 transition'
+                      >
+                        PDF
+                      </a>
+                      {/* Pošalji mejlom */}
+                      <button
+                        type='button'
+                        onClick={() => onSendEmail?.(r)}
+                        className='rounded-lg bg-indigo-600 text-white px-3 py-1.5 hover:bg-indigo-700 transition'
+                      >
+                        Pošalji mejlom
+                      </button>
+                    </div>
+                  </td>
+                )}
+
                 {canDelete && (
                   <td className='px-4 py-2'>
                     <button
@@ -96,10 +130,12 @@ export default function CompanyInvoices() {
   const [data, setData] = useState({ outbound: [], inbound: [] });
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
+  const [ok, setOk] = useState(''); // success poruke
 
   const load = async () => {
     try {
       setErr('');
+      setOk('');
       setLoading(true);
       const res = await api.listInvoices();
       setData({ outbound: res.outbound || [], inbound: res.inbound || [] });
@@ -116,6 +152,20 @@ export default function CompanyInvoices() {
       await load();
     } catch (e) {
       setErr(e.message || 'Greška pri brisanju fakture');
+    }
+  };
+
+  const onSendEmail = async (row) => {
+    // pitamo za email; ako ostavi prazno → backend pokušava po PIB-u da nađe korisnika i uzme njegov email
+    const input = window.prompt(
+      `Email komitenta za fakturu ${row.number} (ostavite prazno za auto-pretragu po PIB-u ${row.recipient_pib}):`,
+      ''
+    );
+    try {
+      await api.sendInvoiceEmail(row.id, input?.trim() || undefined);
+      setOk(`Mejl za fakturu ${row.number} je poslat.`);
+    } catch (e) {
+      setErr(e.message || 'Greška pri slanju mejla');
     }
   };
 
@@ -145,16 +195,24 @@ export default function CompanyInvoices() {
             {err}
           </div>
         )}
+        {ok && (
+          <div className='rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700'>
+            {ok}
+          </div>
+        )}
 
         {loading ? (
           <div className='text-slate-600'>Učitavanje…</div>
         ) : (
           <div className='space-y-6'>
+            {/* Izlazne – ovde prikazujemo i akcije (PDF + slanje) */}
             <Table
               rows={data.outbound}
               title='Izlazne (izdane od mene)'
               canDelete
               onDelete={onDelete}
+              showActions
+              onSendEmail={onSendEmail}
               emptyProps={{
                 title: 'Još uvek nema izlaznih faktura',
                 subtitle: 'Kliknite na dugme ispod da kreirate prvu fakturu.',
@@ -162,6 +220,8 @@ export default function CompanyInvoices() {
                 createHref: '/invoices/new',
               }}
             />
+
+            {/* Ulazne – bez akcija jer PDF endpoint na backendu dozvoljava samo za izdavaoca */}
             <Table
               rows={data.inbound}
               title='Ulazne (stigle meni)'

@@ -1,4 +1,5 @@
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000';
+export const API_BASE =
+  import.meta.env.VITE_API_BASE || 'http://localhost:5000';
 
 async function jsonFetch(path, { method = 'GET', body, headers = {} } = {}) {
   const resp = await fetch(`${API_BASE}${path}`, {
@@ -38,4 +39,10 @@ export const api = {
   createInvoice: (payload) =>
     jsonFetch('/api/invoices', { method: 'POST', body: payload }),
   deleteInvoice: (id) => jsonFetch(`/api/invoices/${id}`, { method: 'DELETE' }),
+  getInvoicePdfUrl: (id) => `${API_BASE}/api/invoices/${id}/pdf`,
+  sendInvoiceEmail: (id, email) =>
+    jsonFetch(`/api/invoices/${id}/send-email`, {
+      method: 'POST',
+      body: email ? { email } : {},
+    }),
 };

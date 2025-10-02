@@ -1,10 +1,13 @@
 import re
 from datetime import date
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, send_file
 from sqlalchemy import or_
 from db import db
 from models import User, Role, Invoice, InvoiceStatus
+from io import BytesIO
 from utils.jwt import require_role
+from utils.pdf import render_invoice_pdf
+from utils.emailer import send_invoice_via_resend
 
 bp_invoices = Blueprint("invoices", __name__, url_prefix="/api/invoices")
 
@@ -174,4 +177,58 @@ def delete_invoice(iid: int):
 
     db.session.delete(inv)
     db.session.commit()
+    return jsonify({"success": True})
+
+@bp_invoices.get("/<int:iid>/pdf")
+@require_role(Role.COMPANY, Role.ADMIN)
+def invoice_pdf(iid: int):
+    user = request.user
+    inv = db.session.get(Invoice, iid)
+    if not inv:
+        return jsonify({"error": "Not found"}), 404
+    if user.role == Role.COMPANY and inv.issuer_user_id != user.id:
+        return jsonify({"error": "Forbidden"}), 403
+
+    pdf_bytes = render_invoice_pdf(inv.to_dict())
+    return send_file(
+        BytesIO(pdf_bytes),
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=f"invoice-{inv.number}.pdf",
+    )
+
+@bp_invoices.post("/<int:iid>/send-email")
+@require_role(Role.COMPANY, Role.ADMIN)
+def invoice_send_email(iid: int):
+    user = request.user
+    inv = db.session.get(Invoice, iid)
+    if not inv:
+        return jsonify({"error": "Not found"}), 404
+    if user.role == Role.COMPANY and inv.issuer_user_id != user.id:
+        return jsonify({"error": "Forbidden"}), 403
+
+    data = request.get_json(silent=True) or {}
+    to_email = (data.get("email") or "").strip().lower()
+    if not to_email:
+        # fallback: probaj da nađeš user-a sa tim PIB-om
+        recipient_user = User.query.filter_by(pib=inv.recipient_pib).first()
+        if recipient_user and recipient_user.email:
+            to_email = recipient_user.email
+
+    if not to_email:
+        return jsonify({"error": "Recipient email is required or a user with that PIB must exist."}), 400
+
+    # Generiši PDF & pošalji
+    pdf_bytes = render_invoice_pdf(inv.to_dict())
+    subject = f"Faktura {inv.number}"
+    html = f"""
+    <p>Poštovani,</p>
+    <p>U prilogu se nalazi faktura <strong>{inv.number}</strong> (iznos {inv.total_amount} {inv.currency}).</p>
+    <p>Srdačno,<br/>SEF e-Fakture</p>
+    """
+    try:
+        send_invoice_via_resend(to_email, subject, html, pdf_bytes, filename=f"invoice-{inv.number}.pdf")
+    except Exception as e:
+        return jsonify({"error": f"Email send failed: {e}"}), 500
+
     return jsonify({"success": True})
