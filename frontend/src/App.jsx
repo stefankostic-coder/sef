@@ -9,6 +9,7 @@ import AdminUsers from './pages/admin/Users.jsx';
 import AdminInvoices from './pages/admin/Invoices.jsx';
 import CompanyInvoices from './pages/Invoices.jsx';
 import CreateInvoice from './pages/InvoiceCreate.jsx';
+import Products from './pages/Products.jsx';
 
 export default function App() {
   return (
@@ -52,6 +53,14 @@ export default function App() {
         element={
           <ProtectedRoute>
             <CreateInvoice />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path='/products'
+        element={
+          <ProtectedRoute>
+            <Products />
           </ProtectedRoute>
         }
       />

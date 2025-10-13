@@ -33,6 +33,12 @@ export default function Navbar() {
   const CompanyLinks = () => (
     <div className='flex items-center gap-3'>
       <Link
+        to='/products'
+        className='text-sm font-medium text-slate-700 hover:text-slate-900 transition'
+      >
+        Artikli
+      </Link>
+      <Link
         to='/invoices'
         className='text-sm font-medium text-slate-700 hover:text-slate-900 transition'
       >
@@ -106,6 +112,7 @@ export default function Navbar() {
           onClick={() => setOpen((o) => !o)}
           aria-label='Toggle menu'
         >
+          {open ? <Menu className='w-5 h-5 hidden' /> : null}
           {open ? <X className='w-5 h-5' /> : <Menu className='w-5 h-5' />}
         </button>
       </nav>
