@@ -33,6 +33,13 @@ export const api = {
       method: 'PATCH',
       body: { verified },
     }),
+  adminListInvoices: () =>
+    jsonFetch('/api/invoices?scope=all').catch(async () => {
+      try {
+        return await jsonFetch('/api/admin/invoices');
+      } catch (_) {}
+      return jsonFetch('/api/invoices/all');
+    }),
 
   // Invoices
   listInvoices: () => jsonFetch('/api/invoices'),

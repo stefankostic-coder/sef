@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../utils/api';
+import { useAuth } from '../context/AuthContext'; // <-- prilagodi putanju ako je drugačija
 import {
   Package,
   FileText,
@@ -7,6 +8,9 @@ import {
   ArrowUpFromDot,
   CircleDollarSign,
   AlertTriangle,
+  Users,
+  Receipt,
+  Scale,
 } from 'lucide-react';
 
 function StatCard({ icon, title, value, subtitle }) {
@@ -33,44 +37,83 @@ function currency(n, cur = 'RSD') {
 }
 
 export default function Stats() {
+  const { user, booted } = useAuth(); // <-- koristimo kontekst
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
+
+  // user-vid
   const [products, setProducts] = useState([]);
   const [invoices, setInvoices] = useState({ outbound: [], inbound: [] });
 
+  // admin-vid
+  const [users, setUsers] = useState([]);
+  const [allInvoices, setAllInvoices] = useState([]);
+
+  const isAdmin =
+    (user?.role && String(user.role).toLowerCase() === 'admin') ||
+    user?.isAdmin === true;
+
   useEffect(() => {
+    // sačekaj dok AuthProvider ne završi bootstrap
+    if (!booted) return;
+
     (async () => {
       try {
         setErr('');
         setLoading(true);
-        const [prodRes, invRes] = await Promise.all([
-          api.listProducts(),
-          api.listInvoices(),
-        ]);
-        setProducts(prodRes.items || []);
-        setInvoices({
-          outbound: invRes.outbound || invRes.items || [],
-          inbound: invRes.inbound || [],
-        });
+
+        if (isAdmin) {
+          // ADMIN grana: povuci sve korisnike i sve fakture
+          const [usersRes, invAllRes] = await Promise.all([
+            api.adminListUsers(),
+            api.adminListInvoices(), // vidi prethodnu poruku za dodavanje metode u api.js
+          ]);
+
+          setUsers(usersRes?.items || usersRes?.users || []);
+
+          // normalizacija invoices odgovora
+          const merged =
+            invAllRes?.items ||
+            invAllRes?.all || [
+              ...(invAllRes?.outbound || []),
+              ...(invAllRes?.inbound || []),
+            ] ||
+            invAllRes ||
+            [];
+
+          setAllInvoices(Array.isArray(merged) ? merged : []);
+        } else {
+          // KORISNIČKA grana
+          const [prodRes, invRes] = await Promise.all([
+            api.listProducts(),
+            api.listInvoices(),
+          ]);
+          setProducts(prodRes.items || []);
+          setInvoices({
+            outbound: invRes.outbound || invRes.items || [],
+            inbound: invRes.inbound || [],
+          });
+        }
       } catch (e) {
-        setErr(e.message || 'Greška pri učitavanju podataka');
+        setErr(e?.message || 'Greška pri učitavanju podataka');
       } finally {
         setLoading(false);
       }
     })();
-  }, []);
+  }, [booted, isAdmin]); // bitno: rerun kada saznamo ulogu
 
-  const stats = useMemo(() => {
+  // helpers
+  const sum = (arr, get = (x) => x) =>
+    arr.reduce((acc, x) => acc + Number(get(x) || 0), 0);
+
+  const userStats = useMemo(() => {
+    if (isAdmin) return null;
     const out = invoices.outbound || [];
     const inn = invoices.inbound || [];
-
-    const sum = (arr, get = (x) => x) =>
-      arr.reduce((acc, x) => acc + Number(get(x) || 0), 0);
 
     const totalOut = sum(out, (x) => x.total_amount);
     const totalIn = sum(inn, (x) => x.total_amount);
 
-    // dugovanja: sve što NIJE paid/cancelled
     const isOpen = (s) =>
       String(s).toLowerCase() !== 'paid' &&
       String(s).toLowerCase() !== 'cancelled';
@@ -90,12 +133,59 @@ export default function Stats() {
       productsCount: products.length,
       outCount: out.length,
       inCount: inn.length,
-      totalOutLabel: currency(totalOut, anyOut), // „dolazi” (drugi duguju meni)
-      totalInLabel: currency(totalIn, anyIn), // „odlazi” (ja dugujem drugima)
+      totalOutLabel: currency(totalOut, anyOut),
+      totalInLabel: currency(totalIn, anyIn),
       dueToMeLabel: currency(dueToMe, anyOut),
       dueToOthersLabel: currency(dueToOthers, anyIn),
     };
-  }, [products, invoices]);
+  }, [isAdmin, products, invoices]);
+
+  const adminStats = useMemo(() => {
+    if (!isAdmin) return null;
+
+    // grupiši promet po valuti
+    const byCurrency = allInvoices.reduce((acc, inv) => {
+      const cur = inv?.currency || 'RSD';
+      const amt = Number(inv?.total_amount || 0);
+      if (!acc[cur]) acc[cur] = 0;
+      acc[cur] += isFinite(amt) ? amt : 0;
+      return acc;
+    }, {});
+
+    const currencies = Object.keys(byCurrency);
+    let volumeLabel = '0.00 RSD';
+    let volumeSubtitle = '';
+
+    if (currencies.length === 0) {
+      volumeLabel = '0.00 RSD';
+    } else if (currencies.length === 1) {
+      const cur = currencies[0];
+      volumeLabel = currency(byCurrency[cur], cur);
+    } else {
+      volumeLabel = 'Više valuta';
+      volumeSubtitle = currencies
+        .map((c) => currency(byCurrency[c], c))
+        .join(' • ');
+    }
+
+    return {
+      usersCount: users.length,
+      invoicesCount: allInvoices.length,
+      volumeLabel,
+      volumeSubtitle,
+    };
+  }, [isAdmin, users, allInvoices]);
+
+  if (!booted) {
+    // čekaj da AuthProvider završi refreshMe()
+    return (
+      <section className='mt-10 px-4'>
+        <div className='rounded-2xl border border-slate-200 bg-white p-6 text-slate-600'>
+          Učitavanje…
+        </div>
+      </section>
+    );
+  }
 
   if (loading) {
     return (
@@ -116,6 +206,35 @@ export default function Stats() {
       </section>
     );
   }
+
+  // --- ADMIN PRIKAZ ---
+  if (isAdmin && adminStats) {
+    return (
+      <section className='mt-10 space-y-6 px-4'>
+        <div className='grid gap-5 sm:grid-cols-2 lg:grid-cols-3'>
+          <StatCard
+            icon={<Users className='h-4 w-4' />}
+            title='Broj korisnika'
+            value={adminStats.usersCount}
+          />
+          <StatCard
+            icon={<Receipt className='h-4 w-4' />}
+            title='Ukupno faktura'
+            value={adminStats.invoicesCount}
+          />
+          <StatCard
+            icon={<Scale className='h-4 w-4' />}
+            title='Ukupni promet'
+            value={adminStats.volumeLabel}
+            subtitle={adminStats.volumeSubtitle}
+          />
+        </div>
+      </section>
+    );
+  }
+
+  // --- KORISNIČKI (NE-ADMIN) PRIKAZ ---
+  const stats = userStats;
 
   return (
     <section className='mt-10 space-y-6 px-4'>
