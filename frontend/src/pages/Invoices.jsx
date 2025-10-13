@@ -36,8 +36,33 @@ function Table({
   emptyProps,
   showActions,
   onSendEmail,
+  editableStatus = false,
+  onChangeStatus,
 }) {
   const hasRows = rows.length > 0;
+
+  const StatusCell = ({ row }) => {
+    if (!editableStatus) {
+      return (
+        <td className='px-4 py-2 uppercase text-slate-600'>{row.status}</td>
+      );
+    }
+    return (
+      <td className='px-4 py-2'>
+        <select
+          value={row.status}
+          onChange={(e) => onChangeStatus?.(row.id, e.target.value)}
+          className='rounded-lg border border-slate-300 px-2 py-1 text-sm'
+        >
+          <option value='draft'>draft</option>
+          <option value='sent'>sent</option>
+          <option value='paid'>paid</option>
+          <option value='cancelled'>cancelled</option>
+        </select>
+      </td>
+    );
+  };
+
   return (
     <div className='rounded-xl border border-slate-200 bg-white overflow-x-auto'>
       <div className='px-4 py-3 border-b border-slate-100 bg-slate-50 font-medium'>
@@ -79,14 +104,12 @@ function Table({
                     ? r.total_amount.toFixed(2)
                     : r.total_amount}
                 </td>
-                <td className='px-4 py-2 uppercase text-slate-600'>
-                  {r.status}
-                </td>
+
+                <StatusCell row={r} />
 
                 {showActions && (
                   <td className='px-4 py-2'>
                     <div className='flex flex-wrap items-center gap-2'>
-                      {/* Preuzmi PDF */}
                       <a
                         href={api.getInvoicePdfUrl(r.id)}
                         target='_blank'
@@ -95,7 +118,6 @@ function Table({
                       >
                         PDF
                       </a>
-                      {/* Pošalji mejlom */}
                       <button
                         type='button'
                         onClick={() => onSendEmail?.(r)}
@@ -130,7 +152,7 @@ export default function CompanyInvoices() {
   const [data, setData] = useState({ outbound: [], inbound: [] });
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
-  const [ok, setOk] = useState(''); // success poruke
+  const [ok, setOk] = useState('');
 
   const load = async () => {
     try {
@@ -156,7 +178,6 @@ export default function CompanyInvoices() {
   };
 
   const onSendEmail = async (row) => {
-    // pitamo za email; ako ostavi prazno → backend pokušava po PIB-u da nađe korisnika i uzme njegov email
     const input = window.prompt(
       `Email komitenta za fakturu ${row.number} (ostavite prazno za auto-pretragu po PIB-u ${row.recipient_pib}):`,
       ''
@@ -169,9 +190,18 @@ export default function CompanyInvoices() {
     }
   };
 
+  const onChangeStatus = async (id, status) => {
+    try {
+      await api.updateInvoiceStatus(id, status);
+      setOk('Status fakture je ažuriran.');
+      await load();
+    } catch (e) {
+      setErr(e.message || 'Greška pri ažuriranju statusa');
+    }
+  };
+
   useEffect(() => {
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -205,7 +235,7 @@ export default function CompanyInvoices() {
           <div className='text-slate-600'>Učitavanje…</div>
         ) : (
           <div className='space-y-6'>
-            {/* Izlazne – ovde prikazujemo i akcije (PDF + slanje) */}
+            {/* Izlazne — status je editable + akcije */}
             <Table
               rows={data.outbound}
               title='Izlazne (izdane od mene)'
@@ -213,6 +243,8 @@ export default function CompanyInvoices() {
               onDelete={onDelete}
               showActions
               onSendEmail={onSendEmail}
+              editableStatus
+              onChangeStatus={onChangeStatus}
               emptyProps={{
                 title: 'Još uvek nema izlaznih faktura',
                 subtitle: 'Kliknite na dugme ispod da kreirate prvu fakturu.',
@@ -221,7 +253,7 @@ export default function CompanyInvoices() {
               }}
             />
 
-            {/* Ulazne – bez akcija jer PDF endpoint na backendu dozvoljava samo za izdavaoca */}
+            {/* Ulazne — status je read-only */}
             <Table
               rows={data.inbound}
               title='Ulazne (stigle meni)'

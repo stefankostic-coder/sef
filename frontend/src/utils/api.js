@@ -26,7 +26,7 @@ export const api = {
     jsonFetch('/api/auth/register', { method: 'POST', body: payload }),
   logout: () => jsonFetch('/api/auth/logout', { method: 'POST' }),
 
-  // Admin: Users
+  // Admin
   adminListUsers: () => jsonFetch('/api/users'),
   adminVerifyUser: (userId, verified = true) =>
     jsonFetch(`/api/users/${userId}/verify`, {
@@ -40,10 +40,10 @@ export const api = {
   createInvoice: (payload) =>
     jsonFetch('/api/invoices', { method: 'POST', body: payload }),
   deleteInvoice: (id) => jsonFetch(`/api/invoices/${id}`, { method: 'DELETE' }),
-  invoicePdf: (id) =>
-    fetch(`${API_BASE}/api/invoices/${id}/pdf`, {
-      method: 'GET',
-      credentials: 'include',
+  updateInvoiceStatus: (id, status) =>
+    jsonFetch(`/api/invoices/${id}/status`, {
+      method: 'PATCH',
+      body: { status },
     }),
   getInvoicePdfUrl: (id) => `${API_BASE}/api/invoices/${id}/pdf`,
   sendInvoiceEmail: (id, email) =>

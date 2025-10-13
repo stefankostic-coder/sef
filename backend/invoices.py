@@ -218,6 +218,33 @@ def delete_invoice(iid: int):
     db.session.commit()
     return jsonify({"success": True})
 
+# --------- Update status ---------
+@bp_invoices.patch("/<int:iid>/status")
+@require_role(Role.COMPANY, Role.ADMIN)
+def update_invoice_status(iid: int):
+    """
+    - Admin: može da menja status bilo koje fakture.
+    - Company: može da menja SAMO svoje (gde je issuer_user_id == user.id).
+    Dozvoljene vrednosti: draft, sent, paid, cancelled.
+    """
+    user = request.user
+    inv = db.session.get(Invoice, iid)
+    if not inv:
+        return jsonify({"error": "Not found"}), 404
+
+    if user.role == Role.COMPANY and inv.issuer_user_id != user.id:
+        return jsonify({"error": "Forbidden"}), 403
+
+    data = request.get_json(force=True) or {}
+    new_status = (data.get("status") or "").strip().lower()
+
+    if new_status not in ALLOWED_STATUS:
+        return jsonify({"error": f"status must be one of {sorted(ALLOWED_STATUS)}"}), 400
+
+    inv.status = InvoiceStatus(new_status)
+    db.session.commit()
+    return jsonify({"invoice": inv.to_dict()})
+
 
 # --------- PDF ---------
 @bp_invoices.get("/<int:iid>/pdf")
