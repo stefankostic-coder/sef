@@ -4,7 +4,9 @@ from config import settings
 from db import db
 from auth import bp as auth_bp
 from users import bp_users
-from invoices import bp_invoices   # <-- NEW
+from invoices import bp_invoices   
+from products import bp_products
+
 
 def create_app():
     app = Flask(__name__)
@@ -27,6 +29,7 @@ def create_app():
     app.register_blueprint(auth_bp)
     app.register_blueprint(bp_users)
     app.register_blueprint(bp_invoices)  
+    app.register_blueprint(bp_products)
 
     @app.get("/health")
     def health():
