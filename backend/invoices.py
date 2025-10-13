@@ -5,7 +5,7 @@ from db import db
 from models import User, Role, Invoice, InvoiceStatus, InvoiceItem, Product, ALLOWED_TAX_RATES
 from utils.jwt import require_role
 from utils.pdf import render_invoice_pdf
-from utils.emailer import send_invoice_via_resend
+from utils.emailer import send_invoice_email
 from io import BytesIO
 
 bp_invoices = Blueprint("invoices", __name__, url_prefix="/api/invoices")
@@ -280,15 +280,20 @@ def invoice_send_email(iid: int):
     if not to_email:
         return jsonify({"error": "Recipient email is required or a user with that PIB must exist."}), 400
 
+    # PDF (opciono: dodaj logo_path ako imaš fajl)
     pdf_bytes = render_invoice_pdf(inv.to_dict())
-    subject = f"Faktura {inv.number}"
-    html = f"""
-    <p>Poštovani,</p>
-    <p>U prilogu se nalazi faktura <strong>{inv.number}</strong> (iznos {inv.total_amount} {inv.currency}).</p>
-    <p>Srdačno,<br/>SEF e-Fakture</p>
-    """
+
+    # javni URL ka pdf-u (za dugme "Preuzmi PDF" u mejlu)
+    download_url = f"{request.url_root.rstrip('/')}/api/invoices/{iid}/pdf"
+
     try:
-        send_invoice_via_resend(to_email, subject, html, pdf_bytes, filename=f"invoice-{inv.number}.pdf")
+        send_invoice_email(
+            to_email=to_email,
+            inv=inv.to_dict(),
+            pdf_bytes=pdf_bytes,
+            pdf_filename=f"invoice-{inv.number}.pdf",
+            download_url=download_url,
+        )
     except Exception as e:
         return jsonify({"error": f"Email send failed: {e}"}), 500
 

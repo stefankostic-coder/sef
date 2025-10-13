@@ -16,11 +16,22 @@ services:
       CORS_ORIGINS: "http://localhost:5173,http://127.0.0.1:5173"
       DB_PATH: "/app/instance/app.db"
       SEED_ON_EVERY_START: "false"
+
+      # === Email (DEV: MailHog) ===
+      MAIL_BACKEND: "smtp"
+      SMTP_HOST: "mailhog"
+      SMTP_PORT: "1025"
+      SMTP_FROM: "Fakture <no-reply@sef.local>"
+
+      # === Resend (PROD opcija) ===
       RESEND_API_KEY: "re_Wqc3skGD_4aeCqauaQzGzFfjh56KpPvAD"
       RESEND_FROM: "Fakture <onboarding@resend.dev>"
       RESEND_REPLY_TO: ""
+
     volumes:
       - backend_instance:/app/instance
+    depends_on:
+      - mailhog
     restart: unless-stopped
 
   frontend:
@@ -34,6 +45,14 @@ services:
       VITE_API_BASE: "http://localhost:5000"
     depends_on:
       - backend
+    restart: unless-stopped
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: sef-mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
     restart: unless-stopped
 
 volumes:

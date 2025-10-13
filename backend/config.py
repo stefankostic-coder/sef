@@ -12,4 +12,13 @@ class Settings:
     RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
     RESEND_FROM = os.getenv("RESEND_FROM", "Fakture <stefankosticsef@gmail.com>")
     RESEND_REPLY_TO = os.getenv("RESEND_REPLY_TO", "")
+
+    MAIL_BACKEND = os.getenv("MAIL_BACKEND", "resend")
+    SMTP_HOST = os.getenv("SMTP_HOST", "localhost")
+    SMTP_PORT = int(os.getenv("SMTP_PORT", "1025"))
+    SMTP_FROM = os.getenv("SMTP_FROM", "no-reply@example.com")
+    SMTP_USE_TLS = os.getenv("SMTP_USE_TLS", "false").lower() == "true"
+    SMTP_USER = os.getenv("SMTP_USER", "")
+    SMTP_PASS = os.getenv("SMTP_PASS", "")
+    SITE_NAME = os.getenv("SITE_NAME", "SEF e-Fakture")
 settings = Settings()
