@@ -18,6 +18,7 @@ async function jsonFetch(path, { method = 'GET', body, headers = {} } = {}) {
 }
 
 export const api = {
+  // Auth
   me: () => jsonFetch('/api/auth/me'),
   login: (email, password) =>
     jsonFetch('/api/auth/login', { method: 'POST', body: { email, password } }),
@@ -25,7 +26,7 @@ export const api = {
     jsonFetch('/api/auth/register', { method: 'POST', body: payload }),
   logout: () => jsonFetch('/api/auth/logout', { method: 'POST' }),
 
-  // --- Admin: Users
+  // Admin: Users
   adminListUsers: () => jsonFetch('/api/users'),
   adminVerifyUser: (userId, verified = true) =>
     jsonFetch(`/api/users/${userId}/verify`, {
@@ -33,7 +34,7 @@ export const api = {
       body: { verified },
     }),
 
-  // --- Invoices
+  // Invoices
   listInvoices: () => jsonFetch('/api/invoices'),
   getInvoice: (id) => jsonFetch(`/api/invoices/${id}`),
   createInvoice: (payload) =>
@@ -44,13 +45,14 @@ export const api = {
       method: 'GET',
       credentials: 'include',
     }),
+  getInvoicePdfUrl: (id) => `${API_BASE}/api/invoices/${id}/pdf`,
   sendInvoiceEmail: (id, email) =>
     jsonFetch(`/api/invoices/${id}/send-email`, {
       method: 'POST',
       body: { email },
     }),
 
-  // ---Products
+  // Products
   listProducts: () => jsonFetch('/api/products'),
   createProduct: (payload) =>
     jsonFetch('/api/products', { method: 'POST', body: payload }),
