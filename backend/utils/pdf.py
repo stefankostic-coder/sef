@@ -14,7 +14,7 @@ from reportlab.platypus import (
     Image,
 )
 from reportlab.pdfgen import canvas
-from reportlab.lib.enums import TA_LEFT, TA_RIGHT
+from reportlab.lib.enums import TA_RIGHT
 
 def fmt_money(value, currency="RSD"):
     try:
@@ -168,7 +168,7 @@ def render_invoice_pdf(inv: dict, *, logo_path: str | None = None) -> bytes:
     currency = inv.get("currency") or "RSD"
 
     data = [
-        ["#", "Opis", "Količina", "Cena", "PDV", "Iznos"]
+        ["#", "Opis", "Kolicina", "Cena", "PDV", "Iznos"]
     ]
 
     total_net = Decimal("0")

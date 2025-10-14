@@ -1,4 +1,3 @@
-# utils/emailer.py
 import base64
 import smtplib
 from email.message import EmailMessage
