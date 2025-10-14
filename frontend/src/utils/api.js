@@ -25,6 +25,9 @@ export const api = {
   register: (payload) =>
     jsonFetch('/api/auth/register', { method: 'POST', body: payload }),
   logout: () => jsonFetch('/api/auth/logout', { method: 'POST' }),
+  getMyProfile: () => jsonFetch('/api/users/me'),
+  updateMyProfile: (payload) =>
+    jsonFetch('/api/users/me', { method: 'PATCH', body: payload }),
 
   // Admin
   adminListUsers: () => jsonFetch('/api/users'),

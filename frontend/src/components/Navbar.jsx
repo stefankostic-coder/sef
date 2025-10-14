@@ -61,8 +61,10 @@ export default function Navbar() {
       {user ? (
         <>
           <span className='hidden sm:inline text-sm text-slate-600'>
-            {user.name} ·{' '}
-            <span className='uppercase text-slate-500'>{user.role}</span>
+            <Link to='/profile' className='hover:underline'>
+              {user.name}
+            </Link>{' '}
+            · <span className='uppercase text-slate-500'>{user.role}</span>
           </span>
           <button
             onClick={doLogout}

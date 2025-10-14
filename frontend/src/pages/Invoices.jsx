@@ -135,7 +135,7 @@ function Table({
                       onClick={() => onDelete(r.id)}
                       className='rounded-lg bg-red-600 text-white px-3 py-1.5 hover:bg-red-700 transition'
                     >
-                      Obriši
+                      Storniraj
                     </button>
                   </td>
                 )}
