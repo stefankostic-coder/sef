@@ -53,6 +53,8 @@ export const api = {
       body: { status },
     }),
   getInvoicePdfUrl: (id) => `${API_BASE}/api/invoices/${id}/pdf`,
+  generateInvoiceNumber: (pib) =>
+    jsonFetch(`/api/invoices/generate-number/${pib}`),
   sendInvoiceEmail: (id, email) =>
     jsonFetch(`/api/invoices/${id}/send-email`, {
       method: 'POST',

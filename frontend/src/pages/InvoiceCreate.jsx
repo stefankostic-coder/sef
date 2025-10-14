@@ -327,17 +327,47 @@ export default function CreateInvoice() {
                   <span className='mb-1 block text-sm font-medium text-slate-700'>
                     Broj fakture *
                   </span>
-                  <input
-                    className={`w-full rounded-lg border px-3 py-2 ${
-                      fieldErrors.number ? 'border-red-400' : 'border-slate-300'
-                    }`}
-                    value={form.number}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, number: e.target.value }))
-                    }
-                    required
-                    placeholder='npr. 100000001-INV-2025-001'
-                  />
+                  <div className='flex gap-2'>
+                    <input
+                      className={`flex-1 rounded-lg border px-3 py-2 ${
+                        fieldErrors.number
+                          ? 'border-red-400'
+                          : 'border-slate-300'
+                      }`}
+                      value={form.number}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, number: e.target.value }))
+                      }
+                      required
+                      placeholder='npr. 100000001-INV-2025-001'
+                    />
+                    <button
+                      type='button'
+                      className='rounded-lg bg-slate-900 text-white px-3 py-2 text-sm hover:bg-black transition disabled:opacity-50'
+                      disabled={!/^\d{9}$/.test(form.recipient_pib)}
+                      onClick={async () => {
+                        if (!/^\d{9}$/.test(form.recipient_pib)) {
+                          setError(
+                            'Unesite validan PIB komitenta pre generisanja broja.'
+                          );
+                          return;
+                        }
+                        try {
+                          const res = await api.generateInvoiceNumber(
+                            form.recipient_pib
+                          );
+                          setForm((f) => ({ ...f, number: res.number }));
+                          setError('');
+                        } catch (e) {
+                          setError(
+                            e.message || 'Greška pri generisanju broja fakture'
+                          );
+                        }
+                      }}
+                    >
+                      Generiši
+                    </button>
+                  </div>
                   {fieldErrors.number && (
                     <div className='text-xs text-red-600 mt-1'>
                       {fieldErrors.number}

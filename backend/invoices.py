@@ -1,5 +1,5 @@
 import re
-from datetime import date
+from datetime import date, datetime
 from flask import Blueprint, request, jsonify, send_file
 from db import db
 from models import User, Role, Invoice, InvoiceStatus, InvoiceItem, Product, ALLOWED_TAX_RATES
@@ -258,6 +258,29 @@ def invoice_pdf(iid: int):
         return jsonify({"error": "Forbidden"}), 403
     pdf_bytes = render_invoice_pdf(inv.to_dict())
     return send_file(BytesIO(pdf_bytes), mimetype="application/pdf", as_attachment=True, download_name=f"invoice-{inv.number}.pdf")
+
+
+@bp_invoices.get("/generate-number/<recipient_pib>")
+@require_role(Role.COMPANY, Role.ADMIN)
+def generate_invoice_number(recipient_pib: str):
+    # provera formata PIB-a
+    if not recipient_pib.isdigit() or len(recipient_pib) != 9:
+        return jsonify({"error": "PIB mora imati tačno 9 cifara"}), 400
+
+    user = request.user
+    year = datetime.utcnow().year
+
+    # prebroji koliko je faktura već izdato za tog izdavaoca u toj godini
+    count = (
+        db.session.query(Invoice)
+        .filter(Invoice.issuer_user_id == user.id)
+        .filter(Invoice.issue_date >= datetime(year, 1, 1))
+        .filter(Invoice.issue_date < datetime(year + 1, 1, 1))
+        .count()
+    )
+
+    next_num = f"{recipient_pib}-INV-{year}-{count + 1:03d}"
+    return jsonify({"number": next_num})
 
 
 # --------- Slanje email-om ---------
